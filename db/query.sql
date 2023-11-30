@@ -1,3 +1,3 @@
 SELECT *
-FROM role
-JOIN employee ON role.salary = employee.id;
+FROM job
+JOIN employee ON job.id = employee.job_id;
