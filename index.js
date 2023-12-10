@@ -1,4 +1,14 @@
 const inquirer = require("inquirer");
+const con = require('./server.js');
+
+con.connect((err) => {
+  if (err) {
+    console.error('Error connecting to the database: ', err);
+    return;
+  }
+  console.log('Connected to the database');
+  questions();
+});
 
 function questions() {
   inquirer
@@ -15,22 +25,17 @@ function questions() {
           "Add a Role",
           "Add an Employee",
           "Update an Employee role",
+          "Exit",
         ],
       },
     ])
     .then((answers) => {
       switch (answers.options) {
         case "View All Departments":
-            const viewDep = inquirer.prompt([
-                {
-                  type: 'input',
-                  name: 'department',
-                  message: 'Which department would you like to view?',
-                  validate: function (input) {
-                    return input === '' ? 'ERROR: Please enter the role name' : true;
-                  }
-                },
-              ]);
+          con.query("SELECT * FROM department", function (err, results) {
+            if (err) throw err;
+            console.table(results);
+          });
         break;
         case "View All Roles":
             const viewRole = inquirer.prompt([
@@ -118,5 +123,3 @@ function questions() {
       console.error("ERROR:", err);
     });
 }
-
-questions();
