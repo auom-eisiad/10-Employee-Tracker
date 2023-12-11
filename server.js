@@ -13,7 +13,7 @@ const con = mysql.createConnection(
   {
     host: 'localhost',
     user: 'root',
-    password: '324743',
+    password: '',
     database: 'tracker_db'
   },
   console.log(`Connected to the tracker_db database.`)

@@ -32,34 +32,24 @@ function questions() {
     .then((answers) => {
       switch (answers.options) {
         case "View All Departments":
-          con.query("SELECT * FROM department", function (err, results) {
+          con.query("SELECT id, class AS department FROM department ORDER BY id;", function (err, results) {
             if (err) throw err;
             console.table(results);
           });
         break;
         case "View All Roles":
-            const viewRole = inquirer.prompt([
-                {
-                  type: 'input',
-                  name: 'role',
-                  message: 'Which role would you like to view?',
-                  validate: function (input) {
-                    return input === '' ? 'ERROR: Please enter the role name' : true;
-                  },
-                },
-              ]);
+          con.query("SELECT job.id, job.title AS job_title, job.salary AS salary, department.class AS department FROM job JOIN department ON job.department_id = department.id ORDER BY job.id;", 
+          function (err, results) {
+            if (err) throw err;
+            console.table(results);
+          });
         break;
         case "View All Employees":
-            const viewEmp = inquirer.prompt([
-                {
-                  type: 'input',
-                  name: 'employee',
-                  message: 'Which employee would you like to view?',
-                  validate: function (input) {
-                    return input === '' ? 'ERROR: Please enter the employee name' : true;
-                  },
-                },
-              ]);
+          con.query("SELECT e.id, e.first_name, e.last_name, j.title AS job_title, CONCAT(m.first_name, ' ', m.last_name) AS manager_name, d.class AS department FROM employee e JOIN job j ON e.job_id = j.id LEFT JOIN employee m ON e.manager_id = m.id JOIN department d ON e.department_id = d.id ORDER BY e.id;", 
+          function (err, results) {
+            if (err) throw err;
+            console.table(results);
+          });
         break;
         case "Add a Department":
             const newDep = inquirer.prompt([
