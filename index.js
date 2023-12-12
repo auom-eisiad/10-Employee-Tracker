@@ -166,18 +166,100 @@ function questions() {
 
         // ADD EMPLOYEE OPTIONS
         case "Add an Employee":
-          const newEmp = inquirer.prompt([
-            {
-              type: "input",
-              name: "depName",
-              message: "What is the name of the employee?",
-              validate: function (input) {
-                return input === ""
-                  ? "ERROR: Please enter the employee name"
-                  : true;
-              },
-            },
-          ]);
+          con.query("SELECT class FROM department", function (err, results) {
+            if (err) throw err;
+
+            const departmentClasses = results.map((result) => result.class);
+
+            con.query(
+              "SELECT DISTINCT CONCAT(manager.first_name, ' ', manager.last_name) AS manager_name FROM employee AS manager JOIN employee AS subordinate ON manager.id = subordinate.manager_id",
+              function (err, managerResults) {
+                if (err) throw err;
+
+                inquirer
+                  .prompt([
+                    {
+                      type: "input",
+                      name: "firstName",
+                      message: "What is the employee's first name?",
+                      validate: function (input) {
+                        return input === ""
+                          ? "ERROR: Please enter the employee's first name"
+                          : true;
+                      },
+                    },
+                    {
+                      type: "input",
+                      name: "lastName",
+                      message: "What is the employee's last name?",
+                      validate: function (input) {
+                        return input === ""
+                          ? "ERROR: Please enter the employee's last name"
+                          : true;
+                      },
+                    },
+                    {
+                      type: "input",
+                      name: "empJob",
+                      message: "What is the employee's job title?",
+                      validate: function (input) {
+                        return input === ""
+                          ? "ERROR: Please enter the employee's job title"
+                          : true;
+                      },
+                    },
+                    {
+                      type: "list",
+                      name: "empDep",
+                      message: "Which department is the employee under?",
+                      choices: departmentClasses,
+                    },
+                    {
+                      type: "list",
+                      name: "empMang",
+                      message: "Does the employee work under someone?",
+                      choices: managerResults.map(
+                        (result) => result.manager_name
+                      ),
+                    },
+                  ])
+                  .then((answers) => {
+                    const newEmpFirstName = answers.firstName;
+                    const newEmpLastName = answers.lastName;
+                    const selectedJobTitle = answers.empJob;
+                    const selectedDepartment = answers.empDep;
+                    const selectedManager = answers.empMang;
+
+                    con.query(
+                      "INSERT INTO employee (first_name, last_name, job_id, department_id, manager_id) VALUES (?, ?, (SELECT id FROM job WHERE title = ?), (SELECT id FROM department WHERE class = ?), (SELECT m.id FROM employee m JOIN employee e ON m.id = e.manager_id WHERE CONCAT(m.first_name, ' ', m.last_name) = ? LIMIT 1));",
+                      [
+                        newEmpFirstName,
+                        newEmpLastName,
+                        selectedJobTitle,
+                        selectedDepartment,
+                        selectedManager,
+                      ],
+                      function (err, result) {
+                        if (err) throw err;
+
+                        console.log(
+                          `${newEmpFirstName} ${newEmpLastName} has been successfully added`
+                        );
+
+                        // Display the updated employee list with details
+                        con.query(
+                          "SELECT e.id, e.first_name, e.last_name, j.title AS job_title, CONCAT(m.first_name, ' ', m.last_name) AS manager_name, d.class AS department FROM employee e JOIN job j ON e.job_id = j.id LEFT JOIN employee m ON e.manager_id = m.id JOIN department d ON e.department_id = d.id ORDER BY e.id;",
+                          function (err, results) {
+                            if (err) throw err;
+                            console.table(results);
+                          }
+                        );
+                      }
+                    );
+                  });
+              }
+            );
+          });
           break;
 
         // UPDATE EMPLOYEE INFO OPTION
