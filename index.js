@@ -1,6 +1,7 @@
 const inquirer = require("inquirer");
 const con = require("./server.js");
 
+// Connect to the port in server.js and log if connected or not
 con.connect((err) => {
   if (err) {
     console.error("Error connecting to the database: ", err);
@@ -10,6 +11,7 @@ con.connect((err) => {
   questions();
 });
 
+// OPTIONS FOR THE EMPLOYEE TRACKER
 function questions() {
   inquirer
     .prompt([
@@ -264,33 +266,102 @@ function questions() {
 
         // UPDATE EMPLOYEE INFO OPTION
         case "Update an Employee Title":
-          const updEmp = inquirer.prompt([
-            {
-              type: "input",
-              name: "updateEmp",
-              message: "Which employee would you like to update?",
-              validate: function (input) {
-                return input === ""
-                  ? "ERROR: Please enter the employee name"
-                  : true;
-              },
-            },
-            {
-              type: "input",
-              name: "updateRole",
-              message: "What role would you like to give this employee?",
-              validate: function (input) {
-                return input === ""
-                  ? "ERROR: Please enter the role name"
-                  : true;
-              },
-            },
-          ]);
+          con.query("SELECT class FROM department", function (err, results) {
+            if (err) throw err;
+
+            const departmentClasses = results.map((result) => result.class);
+
+            con.query(
+              "SELECT DISTINCT CONCAT(manager.first_name, ' ', manager.last_name) AS manager_name FROM employee AS manager JOIN employee AS subordinate ON manager.id = subordinate.manager_id",
+              function (err, managerResults) {
+                if (err) throw err;
+
+                con.query(
+                  "SELECT CONCAT(first_name, ' ', last_name) AS employee_name FROM employee",
+                  function (err, employeeResults) {
+                    if (err) throw err;
+
+                    const employeeList = employeeResults.map(
+                      (result) => result.employee_name
+                    );
+
+                    inquirer
+                      .prompt([
+                        {
+                          type: "list",
+                          name: "empList",
+                          message:
+                            "Please select the employee you would like to update:",
+                          choices: employeeList,
+                        },
+                        {
+                          type: "input",
+                          name: "newJob",
+                          message: "What is the employee's new job title?",
+                          validate: function (input) {
+                            return input === ""
+                              ? "ERROR: Please enter the employee's new job title"
+                              : true;
+                          },
+                        },
+                        {
+                          type: "list",
+                          name: "newDep",
+                          message:
+                            "Which department will the employee fall under?",
+                          choices: departmentClasses,
+                        },
+                        {
+                          type: "list",
+                          name: "newMang",
+                          message: "Who is the employee's manager?",
+                          choices: managerResults.map(
+                            (result) => result.manager_name
+                          ),
+                        },
+                      ])
+                      .then((answers) => {
+                        const selectedEmployee = answers.empList;
+                        const selectedJobTitle = answers.newJob;
+                        const selectedDepartment = answers.newDep;
+                        const selectedManager = answers.newMang;
+
+                        con.query(
+                          "UPDATE employee SET job_id = (SELECT id FROM job WHERE title = ?), department_id = (SELECT id FROM department WHERE class = ?), manager_id = (SELECT m.id FROM (SELECT id, CONCAT(first_name, ' ', last_name) AS full_name FROM employee) m JOIN employee e ON m.id = e.manager_id WHERE m.full_name = ? LIMIT 1) WHERE CONCAT(first_name, ' ', last_name) = ?",
+                          [
+                            selectedJobTitle,
+                            selectedDepartment,
+                            selectedManager,
+                            selectedEmployee,
+                          ],
+                          function (err, result) {
+                            if (err) throw err;
+
+                            console.log(
+                              `Employee ${selectedEmployee} has been successfully updated`
+                            );
+
+                            con.query(
+                              "SELECT e.id, e.first_name, e.last_name, j.title AS job_title, CONCAT(m.first_name, ' ', m.last_name) AS manager_name, d.class AS department FROM employee e JOIN job j ON e.job_id = j.id LEFT JOIN employee m ON e.manager_id = m.id JOIN department d ON e.department_id = d.id ORDER BY e.id;",
+                              function (err, results) {
+                                if (err) throw err;
+                                console.table(results);
+                              }
+                            );
+                          }
+                        );
+                      });
+                  }
+                );
+              }
+            );
+          });
           break;
 
         // EXIT OPTION
         case "Exit":
           console.log("Goodbye!");
+          process.exit();
           break;
       }
     })

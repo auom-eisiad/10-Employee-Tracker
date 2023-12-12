@@ -1,5 +1,6 @@
 const express = require('express');
 const mysql = require('mysql2');
+require('dotenv').config();
 
 const PORT = process.env.PORT || 3001;
 const app = express();
@@ -13,7 +14,7 @@ const con = mysql.createConnection(
   {
     host: 'localhost',
     user: 'root',
-    password: '324743',
+    password: process.env.DB_PASSWORD,
     database: 'tracker_db'
   },
   console.log(`Connected to the tracker_db database.`)
