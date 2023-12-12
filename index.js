@@ -362,7 +362,6 @@ function questions() {
         case "Exit":
           console.log("Goodbye!");
           process.exit();
-          break;
       }
     })
     .catch((err) => {
